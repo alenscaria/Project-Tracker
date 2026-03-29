@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FREELANCE OS — Project Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0e0e10;
+    --surface: #16161a;
+    --surface2: #1e1e24;
+    --border: #2a2a35;
+    --accent: #c8f135;
+    --accent2: #f13580;
+    --accent3: #35d4f1;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --success: #3dffa0;
+    --warn: #ffcc35;
+    --danger: #ff4d6d;
+    --radius: 12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.6;
+  }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 2rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(14,14,16,0.92);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-size: 1rem; font-weight: 800; letter-spacing: 0.12em;
+    color: var(--accent); text-transform: uppercase;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+
+  .header-stats {
+    display: flex; gap: 2rem; align-items: center;
+  }
+  .hstat { text-align: right; }
+  .hstat-val { font-size: 1.2rem; font-weight: 700; color: var(--accent); font-family: 'DM Mono', monospace; }
+  .hstat-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  .btn-new {
+    background: var(--accent); color: #0e0e10;
+    border: none; padding: 0.6rem 1.2rem;
+    border-radius: 6px; font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.8rem; letter-spacing: 0.06em;
+    cursor: pointer; text-transform: uppercase;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-new:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,241,53,0.35); }
+
+  /* LAYOUT */
+  .app { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 65px); }
+
+  /* SIDEBAR */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    position: sticky; top: 65px; height: calc(100vh - 65px);
+  }
+
+  .sidebar-section { margin-bottom: 2rem; }
+  .sidebar-title {
+    font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.75rem; padding: 0 0.5rem;
+  }
+
+  .project-item {
+    padding: 0.75rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 0.3rem;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+    position: relative;
+  }
+  .project-item:hover { background: var(--surface2); }
+  .project-item.active { background: var(--surface2); border-color: var(--border); }
+  .project-item.active::before {
+    content: '';
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 60%; background: var(--accent);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .pi-name { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pi-client { font-size: 0.7rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .pi-status {
+    display: inline-block; font-size: 0.6rem; padding: 0.15rem 0.4rem;
+    border-radius: 3px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    margin-top: 0.4rem;
+  }
+  .status-active { background: rgba(61,255,160,0.15); color: var(--success); }
+  .status-paused { background: rgba(255,204,53,0.15); color: var(--warn); }
+  .status-done { background: rgba(107,107,128,0.15); color: var(--muted); }
+  .status-overdue { background: rgba(255,77,109,0.15); color: var(--danger); }
+
+  /* MAIN CONTENT */
+  main { padding: 2rem; overflow-y: auto; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 60vh; gap: 1rem; color: var(--muted); text-align: center;
+  }
+  .empty-icon { font-size: 3rem; opacity: 0.3; }
+  .empty-state h2 { font-size: 1.2rem; color: var(--text); opacity: 0.5; }
+  .empty-state p { font-size: 0.85rem; max-width: 260px; line-height: 1.6; }
+
+  /* PROJECT DETAIL */
+  .project-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 2rem; gap: 1rem;
+  }
+  .project-title { font-size: 2rem; font-weight: 800; line-height: 1.1; }
+  .project-client { font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; font-family: 'DM Mono', monospace; }
+  .project-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+  .btn { border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--muted); }
+  .btn-danger { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid rgba(255,77,109,0.3); }
+  .btn-danger:hover { background: rgba(255,77,109,0.25); }
+  .btn-accent { background: var(--accent); color: #0e0e10; font-weight: 700; }
+  .btn-accent:hover { box-shadow: 0 4px 14px rgba(200,241,53,0.3); }
+  .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.75rem; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem;
+  }
+  .stat-label { font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+  .stat-val { font-size: 1.6rem; font-weight: 800; font-family: 'DM Mono', monospace; }
+  .stat-val.green { color: var(--success); }
+  .stat-val.yellow { color: var(--warn); }
+  .stat-val.pink { color: var(--accent2); }
+  .stat-val.lime { color: var(--accent); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; background: var(--surface); padding: 0.25rem; border-radius: 8px; width: fit-content; }
+  .tab { padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; color: var(--muted); border: none; background: transparent; font-family: 'Syne', sans-serif; }
+  .tab.active { background: var(--surface2); color: var(--text); }
+
+  /* TIME LOGGER */
+  .time-logger {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem;
+    display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;
+  }
+  .field-group { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 140px; }
+  .field-label { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .field-input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 0.6rem 0.8rem; border-radius: 6px;
+    font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    transition: border-color 0.15s; outline: none; width: 100%;
+  }
+  .field-input:focus { border-color: var(--accent); }
+  .field-input::placeholder { color: var(--muted); }
+
+  /* TIMER */
+  .live-timer {
+    background: linear-gradient(135deg, rgba(200,241,53,0.08), rgba(200,241,53,0.03));
+    border: 1px solid rgba(200,241,53,0.2);
+    border-radius: var(--radius); padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem; margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .timer-display {
+    font-family: 'DM Mono', monospace; font-size: 2.2rem; font-weight: 500;
+    color: var(--accent); letter-spacing: 0.05em;
+  }
+  .timer-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .timer-desc { font-size: 0.85rem; color: var(--text); font-family: 'DM Mono', monospace; flex: 1; }
+  .btn-timer-start { background: rgba(61,255,160,0.15); color: var(--success); border: 1px solid rgba(61,255,160,0.3); }
+  .btn-timer-stop { background: rgba(255,77,109,0.15); color: var(--danger); border: 1px solid rgba(255,77,109,0.3); }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th {
+    text-align: left; padding: 0.6rem 0.75rem;
+    font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid rgba(42,42,53,0.5); transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 0.75rem; vertical-align: middle; font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+  .td-desc { font-family: 'Syne', sans-serif; font-size: 0.85rem; }
+  .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 0.2rem 0.4rem; border-radius: 4px; }
+  .del-btn:hover { color: var(--danger); background: rgba(255,77,109,0.1); }
+
+  /* TODOS */
+  .todo-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);
+    margin-bottom: 0.5rem; background: var(--surface); transition: border-color 0.15s;
+  }
+  .todo-item.done { opacity: 0.5; }
+  .todo-checkbox { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .todo-text { flex: 1; font-size: 0.9rem; }
+  .todo-text.done { text-decoration: line-through; color: var(--muted); }
+  .todo-priority {
+    font-size: 0.65rem; padding: 0.15rem 0.4rem; border-radius: 3px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .prio-high { background: rgba(255,77,109,0.15); color: var(--danger); }
+  .prio-med { background: rgba(255,204,53,0.15); color: var(--warn); }
+  .prio-low { background: rgba(107,107,128,0.15); color: var(--muted); }
+
+  .add-todo-row { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+  select.field-input { cursor: pointer; }
+
+  /* NOTES */
+  .notes-area {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; width: 100%;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.85rem;
+    line-height: 1.7; min-height: 160px; outline: none; resize: vertical;
+    transition: border-color 0.15s;
+  }
+  .notes-area:focus { border-color: var(--accent); }
+
+  /* COST SECTION */
+  .cost-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .cost-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .cost-title { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+  .cost-line { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(42,42,53,0.5); font-size: 0.85rem; }
+  .cost-line:last-child { border-bottom: none; }
+  .cost-total { display: flex; justify-content: space-between; padding: 0.75rem 0 0; font-size: 1.1rem; font-weight: 700; }
+  .cost-total span:last-child { color: var(--accent); font-family: 'DM Mono', monospace; }
+  .cost-line span:last-child { font-family: 'DM Mono', monospace; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { margin: 1rem 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.4rem; }
+  .progress-bar { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 0.4s ease; }
+  .progress-fill.danger { background: var(--danger); }
+  .progress-fill.warn { background: var(--warn); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px); z-index: 500; display: none;
+    align-items: center; justify-content: center; padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 2rem; width: 100%; max-width: 520px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 1.5rem; }
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem; }
+  .field-group.full { grid-column: 1 / -1; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    aside { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .cost-grid { grid-template-columns: 1fr; }
+    .header-stats { display: none; }
+    .modal-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    header { padding: 1rem; }
+    main { padding: 1rem; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .project-title { font-size: 1.4rem; }
+    .timer-display { font-size: 1.6rem; }
+  }
+
+  /* SECTION CARD */
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .section-head-title { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+  .tag { display: inline-block; font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Project<span>Tracker</span></div>
+  <div class="header-stats">
+    <div class="hstat">
+      <div class="hstat-val" id="hTotal">$0</div>
+      <div class="hstat-label">Total Earned</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="hHours">0h</div>
+      <div class="hstat-label">Hours Logged</div>
+    </div>
+    <div class="hstat">
+      <div class="hstat-val" id="hProjects">0</div>
+      <div class="hstat-label">Projects</div>
+    </div>
+  </div>
+  <button class="btn-new" onclick="openModal()">+ New Project</button>
+</header>
+
+<div class="app">
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-title">Projects</div>
+      <div id="projectList"></div>
+    </div>
+  </aside>
+
+  <main id="mainContent">
+    <div class="empty-state">
+      <div class="empty-icon">◎</div>
+      <h2>No project selected</h2>
+      <p>Create a new project or select one from the sidebar to get started.</p>
+      <button class="btn btn-accent" style="margin-top:0.5rem" onclick="openModal()">+ Create Project</button>
+    </div>
+  </main>
+</div>
+
+<!-- NEW PROJECT MODAL -->
+<div class="modal-overlay" id="projectModal">
+  <div class="modal">
+    <div class="modal-title">New Project</div>
+    <div class="modal-grid">
+      <div class="field-group full">
+        <div class="field-label">Project Name</div>
+        <input class="field-input" id="f-name" placeholder="e.g. Brand Redesign"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Client</div>
+        <input class="field-input" id="f-client" placeholder="Client name"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Status</div>
+        <select class="field-input" id="f-status">
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Hourly Rate ($)</div>
+        <input class="field-input" id="f-rate" type="number" placeholder="75"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Budget ($) (optional)</div>
+        <input class="field-input" id="f-budget" type="number" placeholder="5000"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Start Date</div>
+        <input class="field-input" id="f-start" type="date"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Deadline (optional)</div>
+        <input class="field-input" id="f-deadline" type="date"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-accent" onclick="createProject()">Create Project</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  projects: [],
+  activeId: null,
+};
+
+let timerInterval = null;
+let timerStart = null;
+let timerRunning = false;
+let timerDescription = '';
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('freelanceOS');
+    if (saved) state = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function saveState() {
+  try { localStorage.setItem('freelanceOS', JSON.stringify(state)); } catch(e) {}
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('projectModal').classList.add('open');
+  document.getElementById('f-start').value = new Date().toISOString().split('T')[0];
+}
+function closeModal() { document.getElementById('projectModal').classList.remove('open'); }
+
+document.getElementById('projectModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('projectModal')) closeModal();
+});
+
+function createProject() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { document.getElementById('f-name').focus(); return; }
+  const project = {
+    id: uid(),
+    name,
+    client: document.getElementById('f-client').value.trim() || 'Unknown Client',
+    status: document.getElementById('f-status').value,
+    rate: parseFloat(document.getElementById('f-rate').value) || 0,
+    budget: parseFloat(document.getElementById('f-budget').value) || 0,
+    start: document.getElementById('f-start').value,
+    deadline: document.getElementById('f-deadline').value,
+    logs: [],
+    todos: [],
+    notes: '',
+    expenses: [],
+    createdAt: Date.now(),
+  };
+  state.projects.unshift(project);
+  saveState();
+  closeModal();
+  ['f-name','f-client','f-rate','f-budget','f-deadline'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-status').value = 'active';
+  renderSidebar();
+  selectProject(project.id);
+  updateHeaderStats();
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('projectList');
+  list.innerHTML = '';
+  if (!state.projects.length) {
+    list.innerHTML = '<div style="padding:0.5rem;color:var(--muted);font-size:0.8rem;">No projects yet</div>';
+    return;
+  }
+  state.projects.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'project-item' + (p.id === state.activeId ? ' active' : '');
+    const totalHrs = p.logs.reduce((s,l)=>s+l.hours,0);
+    div.innerHTML = `
+      <div class="pi-name">${esc(p.name)}</div>
+      <div class="pi-client">${esc(p.client)}</div>
+      <span class="pi-status status-${p.status}">${p.status}</span>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem;font-family:'DM Mono',monospace">${totalHrs.toFixed(1)}h · $${(totalHrs*p.rate).toFixed(0)}</div>
+    `;
+    div.onclick = () => selectProject(p.id);
+    list.appendChild(div);
+  });
+}
+
+// ─── SELECT PROJECT ───────────────────────────────────────────────────────────
+function selectProject(id) {
+  state.activeId = id;
+  renderSidebar();
+  renderMain();
+}
+
+function getProject(id) { return state.projects.find(p=>p.id===id); }
+
+// ─── MAIN RENDER ─────────────────────────────────────────────────────────────
+let activeTab = 'hours';
+
+function renderMain() {
+  const p = getProject(state.activeId);
+  if (!p) return;
+  const main = document.getElementById('mainContent');
+
+  const totalHrs = p.logs.reduce((s,l)=>s+l.hours,0);
+  const earned = totalHrs * p.rate;
+  const expTotal = p.expenses.reduce((s,e)=>s+e.amount,0);
+  const doneTodos = p.todos.filter(t=>t.done).length;
+  const budgetPct = p.budget ? Math.min(100, (earned/p.budget)*100) : 0;
+
+  main.innerHTML = `
+    <div class="project-header">
+      <div>
+        <div class="project-title">${esc(p.name)}</div>
+        <div class="project-client">${esc(p.client)} · <span class="pi-status status-${p.status}" style="font-size:0.7rem">${p.status}</span></div>
+      </div>
+      <div class="project-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editStatus('${p.id}')">Edit Status</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">Delete</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Hours Logged</div>
+        <div class="stat-val lime">${totalHrs.toFixed(1)}h</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Earned</div>
+        <div class="stat-val green">$${earned.toFixed(0)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">To-Dos Done</div>
+        <div class="stat-val yellow">${doneTodos}/${p.todos.length}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Expenses</div>
+        <div class="stat-val pink">$${expTotal.toFixed(0)}</div>
+      </div>
+    </div>
+
+    ${p.budget ? `
+    <div class="section-card" style="padding:1rem 1.5rem">
+      <div class="progress-wrap" style="margin:0">
+        <div class="progress-label"><span>Budget Used</span><span>$${earned.toFixed(0)} / $${p.budget.toFixed(0)}</span></div>
+        <div class="progress-bar"><div class="progress-fill ${budgetPct>90?'danger':budgetPct>70?'warn':''}" style="width:${budgetPct}%"></div></div>
+      </div>
+    </div>` : ''}
+
+    <div class="tabs">
+      <button class="tab ${activeTab==='hours'?'active':''}" onclick="switchTab('hours')">⏱ Hours</button>
+      <button class="tab ${activeTab==='todos'?'active':''}" onclick="switchTab('todos')">✓ To-Dos</button>
+      <button class="tab ${activeTab==='costs'?'active':''}" onclick="switchTab('costs')">$ Costs</button>
+      <button class="tab ${activeTab==='notes'?'active':''}" onclick="switchTab('notes')">✎ Notes</button>
+    </div>
+
+    <div id="tabContent"></div>
+  `;
+
+  renderTab();
+}
+
+function switchTab(tab) { activeTab = tab; renderTab(); }
+
+function renderTab() {
+  const p = getProject(state.activeId);
+  if (!p) return;
+  const container = document.getElementById('tabContent');
+  if (!container) return;
+
+  if (activeTab === 'hours') container.innerHTML = renderHoursTab(p);
+  else if (activeTab === 'todos') container.innerHTML = renderTodosTab(p);
+  else if (activeTab === 'costs') container.innerHTML = renderCostsTab(p);
+  else if (activeTab === 'notes') container.innerHTML = renderNotesTab(p);
+
+  if (activeTab === 'hours') initTimerUI(p);
+}
+
+// ─── HOURS TAB ────────────────────────────────────────────────────────────────
+function renderHoursTab(p) {
+  const rows = p.logs.slice().reverse().map((l,ri) => {
+    const idx = p.logs.length - 1 - ri;
+    return `<tr>
+      <td>${esc(l.date)}</td>
+      <td class="td-desc">${esc(l.desc)}</td>
+      <td>${l.hours.toFixed(2)}h</td>
+      <td>$${(l.hours*p.rate).toFixed(2)}</td>
+      <td><button class="del-btn" onclick="deleteLog('${p.id}',${idx})">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div id="liveTimerWrap" class="live-timer" style="display:${timerRunning&&timerProject===p.id?'flex':'none'}">
+      <div>
+        <div class="timer-label">Live Timer</div>
+        <div class="timer-display" id="timerDisplay">00:00:00</div>
+      </div>
+      <div class="timer-desc" id="timerDescDisplay">${esc(timerDescription)}</div>
+      <button class="btn btn-timer-stop btn-sm" onclick="stopTimer('${p.id}')">■ Stop & Log</button>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-head-title">Log Hours</div>
+      </div>
+      <div class="time-logger" style="background:none;border:none;padding:0;margin:0">
+        <div class="field-group">
+          <div class="field-label">Date</div>
+          <input class="field-input" id="log-date" type="date" value="${new Date().toISOString().split('T')[0]}"/>
+        </div>
+        <div class="field-group" style="flex:2">
+          <div class="field-label">Description</div>
+          <input class="field-input" id="log-desc" placeholder="What did you work on?"/>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Hours</div>
+          <input class="field-input" id="log-hours" type="number" step="0.25" min="0.25" placeholder="2.5"/>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:flex-end">
+          <button class="btn btn-accent btn-sm" onclick="addLog('${p.id}')">+ Log</button>
+          <button class="btn btn-ghost btn-sm" onclick="startTimer('${p.id}')" ${timerRunning?'disabled':''}>⏱ Timer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-head-title">Time Log (${p.logs.length} entries)</div>
+      </div>
+      ${p.logs.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Description</th><th>Hours</th><th>Value</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : '<div style="color:var(--muted);font-size:0.85rem;padding:0.5rem 0">No hours logged yet.</div>'}
+    </div>
+  `;
+}
+
+let timerProject = null;
+
+function initTimerUI(p) {
+  if (timerRunning && timerProject === p.id) {
+    updateTimerDisplay();
+  }
+}
+
+function startTimer(pid) {
+  const desc = document.getElementById('log-desc').value.trim() || 'Timer session';
+  timerProject = pid;
+  timerDescription = desc;
+  timerStart = Date.now();
+  timerRunning = true;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+  renderTab();
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timerDisplay');
+  if (!el) return;
+  const elapsed = Math.floor((Date.now() - timerStart)/1000);
+  const h = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  const m = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  const s = String(elapsed%60).padStart(2,'0');
+  el.textContent = `${h}:${m}:${s}`;
+}
+
+function stopTimer(pid) {
+  clearInterval(timerInterval);
+  const elapsed = (Date.now() - timerStart)/3600000;
+  timerRunning = false;
+  const p = getProject(pid);
+  p.logs.push({
+    id: uid(),
+    date: new Date().toISOString().split('T')[0],
+    desc: timerDescription + ' (timed)',
+    hours: Math.round(elapsed*100)/100,
+  });
+  saveState();
+  timerProject = null;
+  renderMain();
+  updateHeaderStats();
+}
+
+function addLog(pid) {
+  const date = document.getElementById('log-date').value;
+  const desc = document.getElementById('log-desc').value.trim();
+  const hours = parseFloat(document.getElementById('log-hours').value);
+  if (!desc || !hours || hours <= 0) return;
+  const p = getProject(pid);
+  p.logs.push({ id: uid(), date, desc, hours });
+  saveState();
+  renderTab();
+  updateHeaderStats();
+  document.getElementById('log-desc').value = '';
+  document.getElementById('log-hours').value = '';
+}
+
+function deleteLog(pid, idx) {
+  const p = getProject(pid);
+  p.logs.splice(idx, 1);
+  saveState();
+  renderMain();
+  updateHeaderStats();
+}
+
+// ─── TODOS TAB ────────────────────────────────────────────────────────────────
+function renderTodosTab(p) {
+  const items = p.todos.map((t,i) => `
+    <div class="todo-item ${t.done?'done':''}">
+      <input type="checkbox" class="todo-checkbox" ${t.done?'checked':''} onchange="toggleTodo('${p.id}',${i})"/>
+      <span class="todo-text ${t.done?'done':''}">${esc(t.text)}</span>
+      <span class="todo-priority prio-${t.priority}">${t.priority}</span>
+      <button class="del-btn" onclick="deleteTodo('${p.id}',${i})">✕</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="section-card">
+      <div class="section-head"><div class="section-head-title">To-Do List (${p.todos.filter(t=>!t.done).length} remaining)</div></div>
+      ${items || '<div style="color:var(--muted);font-size:0.85rem">No tasks yet.</div>'}
+      <div class="add-todo-row" style="margin-top:1.25rem">
+        <input class="field-input" id="todo-text" placeholder="Add a task..." style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')addTodo('${p.id}')"/>
+        <select class="field-input" id="todo-prio" style="width:100px">
+          <option value="high">High</option>
+          <option value="med" selected>Med</option>
+          <option value="low">Low</option>
+        </select>
+        <button class="btn btn-accent btn-sm" onclick="addTodo('${p.id}')">+ Add</button>
+      </div>
+    </div>
+  `;
+}
+
+function addTodo(pid) {
+  const text = document.getElementById('todo-text').value.trim();
+  if (!text) return;
+  const prio = document.getElementById('todo-prio').value;
+  const p = getProject(pid);
+  p.todos.push({ id: uid(), text, priority: prio, done: false });
+  saveState();
+  renderTab();
+}
+
+function toggleTodo(pid, idx) {
+  const p = getProject(pid);
+  p.todos[idx].done = !p.todos[idx].done;
+  saveState();
+  renderTab();
+  renderMain(); // update stat
+}
+
+function deleteTodo(pid, idx) {
+  const p = getProject(pid);
+  p.todos.splice(idx, 1);
+  saveState();
+  renderTab();
+}
+
+// ─── COSTS TAB ───────────────────────────────────────────────────────────────
+function renderCostsTab(p) {
+  const totalHrs = p.logs.reduce((s,l)=>s+l.hours,0);
+  const earned = totalHrs * p.rate;
+  const expTotal = p.expenses.reduce((s,e)=>s+e.amount,0);
+  const net = earned - expTotal;
+
+  const expRows = p.expenses.map((e,i) => `
+    <div class="cost-line" style="align-items:center">
+      <span>${esc(e.desc)}</span>
+      <span style="display:flex;align-items:center;gap:0.75rem">
+        $${e.amount.toFixed(2)}
+        <button class="del-btn" onclick="deleteExpense('${p.id}',${i})">✕</button>
+      </span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="cost-grid">
+      <div class="cost-card">
+        <div class="cost-title">Summary</div>
+        <div class="cost-line"><span>Hourly Rate</span><span>$${p.rate}/hr</span></div>
+        <div class="cost-line"><span>Total Hours</span><span>${totalHrs.toFixed(2)}h</span></div>
+        <div class="cost-line"><span>Time Earned</span><span>$${earned.toFixed(2)}</span></div>
+        ${p.budget ? `<div class="cost-line"><span>Budget</span><span>$${p.budget.toFixed(2)}</span></div>` : ''}
+        <div class="cost-line"><span>Expenses</span><span>−$${expTotal.toFixed(2)}</span></div>
+        <div class="cost-total"><span>Net</span><span>${net >= 0 ? '' : '−'}$${Math.abs(net).toFixed(2)}</span></div>
+      </div>
+
+      <div class="cost-card">
+        <div class="cost-title">Expenses</div>
+        ${expRows || '<div style="color:var(--muted);font-size:0.82rem;margin-bottom:0.75rem">No expenses logged.</div>'}
+        <div style="display:flex;gap:0.5rem;margin-top:1rem;flex-wrap:wrap">
+          <input class="field-input" id="exp-desc" placeholder="Expense description" style="flex:2;min-width:120px"/>
+          <input class="field-input" id="exp-amt" type="number" placeholder="Amount" style="flex:1;min-width:80px"/>
+          <button class="btn btn-accent btn-sm" onclick="addExpense('${p.id}')">+ Add</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function addExpense(pid) {
+  const desc = document.getElementById('exp-desc').value.trim();
+  const amount = parseFloat(document.getElementById('exp-amt').value);
+  if (!desc || !amount) return;
+  const p = getProject(pid);
+  p.expenses.push({ id: uid(), desc, amount });
+  saveState();
+  renderTab();
+  renderMain();
+}
+
+function deleteExpense(pid, idx) {
+  const p = getProject(pid);
+  p.expenses.splice(idx, 1);
+  saveState();
+  renderTab();
+  renderMain();
+}
+
+// ─── NOTES TAB ───────────────────────────────────────────────────────────────
+function renderNotesTab(p) {
+  return `
+    <div class="section-card">
+      <div class="section-head"><div class="section-head-title">Project Notes</div></div>
+      <textarea class="notes-area" id="notes-area" placeholder="Write notes, meeting summaries, important details..."
+        oninput="saveNotes('${p.id}')">${esc(p.notes)}</textarea>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem">Auto-saved as you type</div>
+    </div>
+  `;
+}
+
+function saveNotes(pid) {
+  const el = document.getElementById('notes-area');
+  if (!el) return;
+  const p = getProject(pid);
+  p.notes = el.value;
+  saveState();
+}
+
+// ─── HEADER STATS ─────────────────────────────────────────────────────────────
+function updateHeaderStats() {
+  let total = 0, hours = 0;
+  state.projects.forEach(p => {
+    const h = p.logs.reduce((s,l)=>s+l.hours,0);
+    hours += h;
+    total += h * p.rate;
+  });
+  document.getElementById('hTotal').textContent = '$' + total.toFixed(0);
+  document.getElementById('hHours').textContent = hours.toFixed(1) + 'h';
+  document.getElementById('hProjects').textContent = state.projects.length;
+}
+
+// ─── STATUS EDIT ─────────────────────────────────────────────────────────────
+function editStatus(pid) {
+  const p = getProject(pid);
+  const statuses = ['active','paused','done','overdue'];
+  const cur = statuses.indexOf(p.status);
+  p.status = statuses[(cur+1) % statuses.length];
+  saveState();
+  renderSidebar();
+  renderMain();
+}
+
+// ─── DELETE PROJECT ───────────────────────────────────────────────────────────
+function deleteProject(pid) {
+  if (!confirm('Delete this project? This cannot be undone.')) return;
+  state.projects = state.projects.filter(p=>p.id!==pid);
+  state.activeId = null;
+  saveState();
+  renderSidebar();
+  updateHeaderStats();
+  document.getElementById('mainContent').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">◎</div>
+      <h2>No project selected</h2>
+      <p>Create a new project or select one from the sidebar.</p>
+      <button class="btn btn-accent" style="margin-top:0.5rem" onclick="openModal()">+ Create Project</button>
+    </div>`;
+}
+
+// ─── ESCAPE ───────────────────────────────────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadState();
+renderSidebar();
+updateHeaderStats();
+if (state.activeId) renderMain();
+</script>
+</body>
+</html>
