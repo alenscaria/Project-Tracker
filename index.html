@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FREELANCE OS — Project Tracker</title>
+<title>Project Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <style>
   :root {
@@ -321,7 +321,7 @@
   <div class="logo">Project<span>Tracker</span></div>
   <div class="header-stats">
     <div class="hstat">
-      <div class="hstat-val" id="hTotal">$0</div>
+      <div class="hstat-val" id="hTotal">₹0</div>
       <div class="hstat-label">Total Earned</div>
     </div>
     <div class="hstat">
@@ -376,12 +376,12 @@
         </select>
       </div>
       <div class="field-group">
-        <div class="field-label">Hourly Rate ($)</div>
-        <input class="field-input" id="f-rate" type="number" placeholder="75"/>
+        <div class="field-label">Hourly Rate (₹)</div>
+        <input class="field-input" id="f-rate" type="number" placeholder="750"/>
       </div>
       <div class="field-group">
-        <div class="field-label">Budget ($) (optional)</div>
-        <input class="field-input" id="f-budget" type="number" placeholder="5000"/>
+        <div class="field-label">Budget (₹) (optional)</div>
+        <input class="field-input" id="f-budget" type="number" placeholder="50000"/>
       </div>
       <div class="field-group">
         <div class="field-label">Start Date</div>
@@ -479,7 +479,7 @@ function renderSidebar() {
       <div class="pi-name">${esc(p.name)}</div>
       <div class="pi-client">${esc(p.client)}</div>
       <span class="pi-status status-${p.status}">${p.status}</span>
-      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem;font-family:'DM Mono',monospace">${totalHrs.toFixed(1)}h · $${(totalHrs*p.rate).toFixed(0)}</div>
+      <div style="font-size:0.7rem;color:var(--muted);margin-top:0.3rem;font-family:'DM Mono',monospace">${totalHrs.toFixed(1)}h · ₹${(totalHrs*p.rate).toFixed(0)}</div>
     `;
     div.onclick = () => selectProject(p.id);
     list.appendChild(div);
@@ -528,7 +528,7 @@ function renderMain() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Earned</div>
-        <div class="stat-val green">$${earned.toFixed(0)}</div>
+        <div class="stat-val green">₹${earned.toFixed(0)}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">To-Dos Done</div>
@@ -536,14 +536,14 @@ function renderMain() {
       </div>
       <div class="stat-card">
         <div class="stat-label">Expenses</div>
-        <div class="stat-val pink">$${expTotal.toFixed(0)}</div>
+        <div class="stat-val pink">₹${expTotal.toFixed(0)}</div>
       </div>
     </div>
 
     ${p.budget ? `
     <div class="section-card" style="padding:1rem 1.5rem">
       <div class="progress-wrap" style="margin:0">
-        <div class="progress-label"><span>Budget Used</span><span>$${earned.toFixed(0)} / $${p.budget.toFixed(0)}</span></div>
+        <div class="progress-label"><span>Budget Used</span><span>₹${earned.toFixed(0)} / ₹${p.budget.toFixed(0)}</span></div>
         <div class="progress-bar"><div class="progress-fill ${budgetPct>90?'danger':budgetPct>70?'warn':''}" style="width:${budgetPct}%"></div></div>
       </div>
     </div>` : ''}
@@ -551,7 +551,7 @@ function renderMain() {
     <div class="tabs">
       <button class="tab ${activeTab==='hours'?'active':''}" onclick="switchTab('hours')">⏱ Hours</button>
       <button class="tab ${activeTab==='todos'?'active':''}" onclick="switchTab('todos')">✓ To-Dos</button>
-      <button class="tab ${activeTab==='costs'?'active':''}" onclick="switchTab('costs')">$ Costs</button>
+      <button class="tab ${activeTab==='costs'?'active':''}" onclick="switchTab('costs')">₹ Costs</button>
       <button class="tab ${activeTab==='notes'?'active':''}" onclick="switchTab('notes')">✎ Notes</button>
     </div>
 
@@ -585,7 +585,7 @@ function renderHoursTab(p) {
       <td>${esc(l.date)}</td>
       <td class="td-desc">${esc(l.desc)}</td>
       <td>${l.hours.toFixed(2)}h</td>
-      <td>$${(l.hours*p.rate).toFixed(2)}</td>
+      <td>₹${(l.hours*p.rate).toFixed(2)}</td>
       <td><button class="del-btn" onclick="deleteLog('${p.id}',${idx})">✕</button></td>
     </tr>`;
   }).join('');
@@ -771,7 +771,7 @@ function renderCostsTab(p) {
     <div class="cost-line" style="align-items:center">
       <span>${esc(e.desc)}</span>
       <span style="display:flex;align-items:center;gap:0.75rem">
-        $${e.amount.toFixed(2)}
+        ₹${e.amount.toFixed(2)}
         <button class="del-btn" onclick="deleteExpense('${p.id}',${i})">✕</button>
       </span>
     </div>
@@ -781,12 +781,12 @@ function renderCostsTab(p) {
     <div class="cost-grid">
       <div class="cost-card">
         <div class="cost-title">Summary</div>
-        <div class="cost-line"><span>Hourly Rate</span><span>$${p.rate}/hr</span></div>
+        <div class="cost-line"><span>Hourly Rate</span><span>₹${p.rate}/hr</span></div>
         <div class="cost-line"><span>Total Hours</span><span>${totalHrs.toFixed(2)}h</span></div>
-        <div class="cost-line"><span>Time Earned</span><span>$${earned.toFixed(2)}</span></div>
-        ${p.budget ? `<div class="cost-line"><span>Budget</span><span>$${p.budget.toFixed(2)}</span></div>` : ''}
-        <div class="cost-line"><span>Expenses</span><span>−$${expTotal.toFixed(2)}</span></div>
-        <div class="cost-total"><span>Net</span><span>${net >= 0 ? '' : '−'}$${Math.abs(net).toFixed(2)}</span></div>
+        <div class="cost-line"><span>Time Earned</span><span>₹${earned.toFixed(2)}</span></div>
+        ${p.budget ? `<div class="cost-line"><span>Budget</span><span>₹${p.budget.toFixed(2)}</span></div>` : ''}
+        <div class="cost-line"><span>Expenses</span><span>−₹${expTotal.toFixed(2)}</span></div>
+        <div class="cost-total"><span>Net</span><span>${net >= 0 ? '' : '−'}₹${Math.abs(net).toFixed(2)}</span></div>
       </div>
 
       <div class="cost-card">
@@ -849,7 +849,7 @@ function updateHeaderStats() {
     hours += h;
     total += h * p.rate;
   });
-  document.getElementById('hTotal').textContent = '$' + total.toFixed(0);
+  document.getElementById('hTotal').textContent = '₹' + total.toFixed(0);
   document.getElementById('hHours').textContent = hours.toFixed(1) + 'h';
   document.getElementById('hProjects').textContent = state.projects.length;
 }
